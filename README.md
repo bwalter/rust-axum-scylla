@@ -11,10 +11,17 @@ Get IP address:
 docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hello-scylla 
 ```
 
-### Run demo app
+### Build and run demo app
 
+Option 1: Via docker
 ```
-$ RUST_LOG=hello=debug,tower_http::trace=debug cargo run -- --addr <ip_addr>
+$ docker build -t rust-axum-scylla .
+$ docker run --rm -it rust-axum-scylla --addr <scylla_ip_addr>
+```
+
+Option 2: Directly via Cargo
+```
+$ RUST_LOG=hello=debug,tower_http::trace=debug cargo run -- --addr <scylla_ip_addr>
 ```
 
 ### Test Rest API
