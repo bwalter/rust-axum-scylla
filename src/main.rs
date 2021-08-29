@@ -1,25 +1,23 @@
 use anyhow::Result;
 use axum::{
     handler::{get, post},
-    http::StatusCode,
     response::IntoResponse,
     AddExtensionLayer, Router,
 };
-use response::{AppResponse, AppResponseResult};
 use std::{
     convert::Infallible,
     net::SocketAddr,
     sync::{Arc, RwLock},
     time::Duration,
 };
-use tokio::time::sleep;
-use tower::{timeout::error::Elapsed, BoxError, ServiceBuilder};
+use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
-use crate::response::AppResponseError;
+use crate::response::{AppResponse, AppResponseError};
 use crate::state::State;
 
 mod db;
+mod handlers;
 mod response;
 mod state;
 mod vehicle;
@@ -59,10 +57,10 @@ async fn main() -> Result<()> {
 
     // Route
     let app = Router::new()
-        .route("/", get(hello))
-        .route("/timeout", get(timeout))
-        .route("/vehicles", get(vehicle::find))
-        .route("/vehicles", post(vehicle::create))
+        .route("/", get(handlers::hello))
+        .route("/timeout", get(handlers::timeout))
+        .route("/vehicles", get(handlers::find_vehicle))
+        .route("/vehicles", post(handlers::create_vehicle))
         .layer(middleware_stack)
         .layer(AddExtensionLayer::new(db))
         .layer(AddExtensionLayer::new(shared_state))
@@ -79,24 +77,17 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-// basic handler that responds with a static string
-async fn hello() -> AppResponseResult {
-    sleep(Duration::from_secs(3)).await;
-    Ok((StatusCode::OK, "Hello, World!").into_response())
-}
-
-// basic handler that will time out
-async fn timeout() -> AppResponseResult {
-    sleep(Duration::from_secs(3)).await;
-    Ok((StatusCode::OK, "Unreachable").into_response())
-}
-
-fn convert_tower_error_into_response(e: BoxError) -> AppResponse {
-    if e.is::<Elapsed>() {
+fn convert_tower_error_into_response(e: tower::BoxError) -> AppResponse {
+    let response_error = if e.is::<tower::timeout::error::Elapsed>() {
         // Timeout
-        AppResponseError::TimeoutError(e.downcast().unwrap()).into_response()
+        match e.downcast() {
+            Ok(e) => AppResponseError::TimeoutError(e),
+            Err(e) => AppResponseError::StdError(e),
+        }
     } else {
         // Generic error
-        AppResponseError::StdError(e).into_response()
-    }
+        AppResponseError::StdError(e)
+    };
+
+    response_error.into_response()
 }
