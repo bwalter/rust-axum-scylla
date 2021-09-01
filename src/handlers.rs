@@ -14,15 +14,13 @@ use crate::{
     vehicle::{Vehicle, VehicleRow},
 };
 
-// basic handler that responds with a static string
 pub async fn hello() -> AppResponseResult {
-    tokio::time::sleep(Duration::from_secs(3)).await;
     Ok((StatusCode::OK, "Hello, World!").into_response())
 }
 
-// basic handler that will time out
+// Will time out because of the timeout middleware!
 pub async fn timeout() -> AppResponseResult {
-    tokio::time::sleep(Duration::from_secs(3)).await;
+    tokio::time::sleep(Duration::from_secs(100)).await;
     Ok((StatusCode::OK, "Unreachable").into_response())
 }
 
@@ -32,10 +30,10 @@ pub struct FindVehicle {
 }
 
 pub async fn find_vehicle(
-    db: extract::Extension<Arc<scylla::Session>>,
+    db_session: extract::Extension<Arc<scylla::Session>>,
     Query(payload): Query<FindVehicle>,
 ) -> AppResponseResult {
-    let rows = db
+    let rows = db_session
         .query("SELECT * FROM vehicles WHERE vin = ?", (&payload.vin,))
         .await?
         .rows
@@ -55,7 +53,7 @@ pub async fn find_vehicle(
 }
 
 pub async fn create_vehicle(
-    db: extract::Extension<Arc<scylla::Session>>,
+    db_session: extract::Extension<Arc<scylla::Session>>,
     json_payload: Json<Vehicle>,
 ) -> AppResponseResult {
     let Json(vehicle) = json_payload;
@@ -67,11 +65,12 @@ pub async fn create_vehicle(
         MaybeUnset::Unset
     };
 
-    db.query(
-        "INSERT INTO vehicles (vin, engine_type, ev_data) VALUES (?, ?, ?)",
-        (&row.vin, row.engine_type, ev_data),
-    )
-    .await?;
+    db_session
+        .query(
+            "INSERT INTO vehicles (vin, engine_type, ev_data) VALUES (?, ?, ?)",
+            (&row.vin, row.engine_type, ev_data),
+        )
+        .await?;
 
     Ok((StatusCode::CREATED, Json(vehicle)).into_response())
 }

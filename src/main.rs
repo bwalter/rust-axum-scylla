@@ -43,15 +43,15 @@ async fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
-    // Database
-    let db = Arc::new(db::create_session(&args.addr, args.port).await?);
+    // Database session
+    let db_session = Arc::new(db::create_session(&args.addr, args.port).await?);
 
     // Shared state
     let shared_state = Arc::new(RwLock::new(State { count: 0 }));
 
     // Middlewares: Tower layer stack
     let middleware_stack = ServiceBuilder::new()
-        .timeout(Duration::from_secs(1))
+        .timeout(Duration::from_secs(15))
         .layer(TraceLayer::new_for_http())
         .into_inner();
 
@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
         .route("/vehicles", get(handlers::find_vehicle))
         .route("/vehicles", post(handlers::create_vehicle))
         .layer(middleware_stack)
-        .layer(AddExtensionLayer::new(db))
+        .layer(AddExtensionLayer::new(db_session))
         .layer(AddExtensionLayer::new(shared_state))
         .handle_error(|e| Ok::<_, Infallible>(convert_tower_error_into_response(e)));
 
