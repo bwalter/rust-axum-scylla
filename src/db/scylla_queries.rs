@@ -7,8 +7,9 @@ use scylla::{
 use std::sync::Arc;
 
 use crate::{
-    db::queries::{Queries, QueryResult},
+    db::queries::Queries,
     error::AppError,
+    result::AppResult,
     vehicle::{Vehicle, VehicleRow},
 };
 
@@ -32,7 +33,7 @@ impl ScyllaQueries {
 
 #[async_trait]
 impl Queries for ScyllaQueries {
-    async fn create_tables_if_not_exist(&self) -> QueryResult<()> {
+    async fn create_tables_if_not_exist(&self) -> AppResult<()> {
         self.session
             .query(
                 "CREATE KEYSPACE IF NOT EXISTS hello WITH REPLICATION = \
@@ -52,7 +53,7 @@ impl Queries for ScyllaQueries {
 
         self.session
         .query(
-            "CREATE TABLE IF NOT EXISTS vehicles (vin text primary key, engine_type text, ev_data ev_data )",
+            "CREATE TABLE IF NOT EXISTS vehicles (vin text primary key, engine_type text, ev_data ev_data)",
             &[],
         )
         .await?;
@@ -60,11 +61,11 @@ impl Queries for ScyllaQueries {
         Ok(())
     }
 
-    async fn create_vehicle(&self, vehicle: &Vehicle) -> QueryResult<()> {
+    async fn create_vehicle(&self, vehicle: &Vehicle) -> AppResult<()> {
         let prepared_statement = self
             .get_prepared_statement_helper(
                 &self.create_vehicle,
-                "INSERT INTO vehicles (vin, engine_type, ev_data) VALUES (?, ?, ?)",
+                "INSERT INTO vehicles (vin, engine_type, ev_data) VALUES (?, ?, ?) IF NOT EXISTS",
             )
             .await?;
 
@@ -75,13 +76,17 @@ impl Queries for ScyllaQueries {
             MaybeUnset::Unset
         };
 
+        // TODO: check if query has been applied (lightweight transaction support)
+        // if not, return QueryResult::
+        // -> see https://github.com/scylladb/scylla-rust-driver/issues/100
         self.session
             .execute(&prepared_statement, (&row.vin, &row.engine_type, &ev_data))
             .await?;
+
         Ok(())
     }
 
-    async fn find_one_vehicle(&self, vin: &str) -> QueryResult<Vehicle> {
+    async fn find_one_vehicle(&self, vin: &str) -> Result<Vehicle, AppError> {
         let prepared_statement = self
             .get_prepared_statement_helper(
                 &self.create_vehicle,

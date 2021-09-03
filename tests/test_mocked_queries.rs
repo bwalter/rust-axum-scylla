@@ -25,8 +25,9 @@ async fn test_create_vehicle() -> Result<()> {
         "engine": { "type": "Combustion" }
     });
 
-    // Insert vehicle
     let client = reqwest::Client::new();
+
+    // Insert vehicle
     let res = client
         .post(format!("http://{}/vehicle", addr))
         .json(&vehicle_json)
@@ -45,6 +46,14 @@ async fn test_create_vehicle() -> Result<()> {
         Some(serde_json::from_value(vehicle_json.clone())?),
     );
 
+    // Insert vehicle again
+    let res = client
+        .post(format!("http://{}/vehicle", addr))
+        .json(&vehicle_json)
+        .send()
+        .await?;
+
+    assert_eq!(res.status(), StatusCode::CONFLICT);
     Ok(())
 }
 

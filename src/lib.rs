@@ -2,6 +2,7 @@ pub mod db;
 pub mod error;
 pub mod handlers;
 pub mod response;
+pub mod result;
 pub mod state;
 pub mod vehicle;
 

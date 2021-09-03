@@ -4,6 +4,7 @@ use axum::{
     http::{Response, StatusCode},
     response::IntoResponse,
 };
+use scylla::transport::errors::DbError;
 use serde_json::json;
 
 #[derive(thiserror::Error, Debug)]
@@ -35,9 +36,13 @@ impl IntoResponse for AppError {
             AppError::DbSessionError(ref e) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, Some(e.to_string()))
             }
-            AppError::DbQueryError(ref e) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, Some(e.to_string()))
-            }
+            AppError::DbQueryError(ref e) => match *e {
+                scylla::transport::errors::QueryError::DbError(
+                    DbError::AlreadyExists { .. },
+                    _,
+                ) => (StatusCode::CONFLICT, Some(e.to_string())),
+                _ => (StatusCode::INTERNAL_SERVER_ERROR, Some(e.to_string())),
+            },
             AppError::DbQueryArcError(ref e) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, Some(e.to_string()))
             }
