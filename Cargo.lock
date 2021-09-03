@@ -62,6 +62,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a61eb019cb8f415d162cb9f12130ee6bbe9168b7d953c17f4ad049e4051ca00"
 
 [[package]]
+name = "async-oncecell"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e81301a5b23aaf8a2b002c722af894aca1d423ac1b0e17f553e8a2964e441a3"
+dependencies = [
+ "futures",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -329,6 +338,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "argh",
+ "async-oncecell",
+ "async-trait",
  "axum",
  "scylla",
  "serde",

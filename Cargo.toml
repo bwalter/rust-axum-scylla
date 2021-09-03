@@ -7,6 +7,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.43"
+async-oncecell = "0.2.0"
+async-trait = "0.1.51"
 argh = "0.1.5"
 axum = "0.2.0"
 scylla = "0.2.1"

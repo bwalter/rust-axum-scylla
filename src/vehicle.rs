@@ -5,8 +5,6 @@ use std::str::FromStr;
 use std::string::ToString;
 use strum_macros::{AsRefStr, EnumString, ToString};
 
-use crate::db::WithDbConstants;
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Vehicle {
     pub vin: String,
@@ -57,28 +55,4 @@ impl VehicleRow {
             None
         }
     }
-}
-
-impl WithDbConstants for Vehicle {
-    const TABLE_NAME: &'static str = "vehicle";
-}
-
-pub async fn create_table_if_not_exists(
-    session: &scylla::Session,
-) -> Result<(), scylla::transport::errors::NewSessionError> {
-    session
-        .query(
-            "CREATE TYPE IF NOT EXISTS ev_data (battery_capacity_in_kwh int, soc_in_percent int)",
-            &[],
-        )
-        .await?;
-
-    session
-        .query(
-            "CREATE TABLE IF NOT EXISTS vehicles (vin text primary key, engine_type text, ev_data ev_data )",
-            &[],
-        )
-        .await?;
-
-    Ok(())
 }
