@@ -1,6 +1,8 @@
+use std::net::{SocketAddr, TcpListener};
+
 use anyhow::Result;
 
-use hello::{db, handler::AxumHandler};
+use hello::db;
 
 /// A sample Rust backend app with Rest API and Scylla DB
 #[derive(argh::FromArgs)]
@@ -26,5 +28,10 @@ async fn main() -> Result<()> {
     // Start DB session and Queries
     let queries = db::start_db_session_and_create_queries(&args.addr, args.port).await?;
 
-    hello::start::<AxumHandler>(queries).await
+    // TCP listener
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let listener = TcpListener::bind(&addr).expect("Could not bind ephemeral socket");
+
+    // Start server
+    hello::start(listener, queries, None).await
 }

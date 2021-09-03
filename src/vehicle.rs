@@ -5,14 +5,16 @@ use std::str::FromStr;
 use std::string::ToString;
 use strum_macros::{AsRefStr, EnumString, ToString};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Vehicle {
     pub vin: String,
     pub engine: Engine,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ev_data: Option<EvData>,
 }
 
-#[derive(Serialize, Deserialize, ToString, AsRefStr, EnumString, Clone, Debug)]
+#[derive(Serialize, Deserialize, ToString, AsRefStr, EnumString, Clone, PartialEq, Debug)]
 #[serde(tag = "type")]
 pub enum Engine {
     Combustion,
@@ -22,7 +24,7 @@ pub enum Engine {
 
 impl Engine {}
 
-#[derive(Default, Serialize, Deserialize, FromUserType, IntoUserType, Clone, Debug)]
+#[derive(Default, Serialize, Deserialize, FromUserType, IntoUserType, Clone, PartialEq, Debug)]
 pub struct EvData {
     pub battery_capacity_in_kwh: i32,
     pub soc_in_percent: i32,
