@@ -18,7 +18,7 @@ type PreparedQueryResult = Result<Arc<PreparedStatement>, Arc<QueryError>>;
 pub struct ScyllaQueries {
     session: Arc<Session>,
     pub create_vehicle: OnceCell<PreparedQueryResult>,
-    pub find_vehicles: OnceCell<PreparedQueryResult>,
+    pub find_one_vehicle: OnceCell<PreparedQueryResult>,
 }
 
 impl ScyllaQueries {
@@ -26,7 +26,7 @@ impl ScyllaQueries {
         ScyllaQueries {
             session,
             create_vehicle: OnceCell::new(),
-            find_vehicles: OnceCell::new(),
+            find_one_vehicle: OnceCell::new(),
         }
     }
 }
@@ -76,9 +76,12 @@ impl Queries for ScyllaQueries {
             MaybeUnset::Unset
         };
 
-        // TODO: check if query has been applied (lightweight transaction support)
-        // if not, return QueryResult::
+        // TODO: check if the insert query has been applied, instead, as soon as lightweight transactions are supported
         // -> see https://github.com/scylladb/scylla-rust-driver/issues/100
+        if let Ok(_) = self.find_one_vehicle(&vehicle.vin).await {
+            return Err(AppError::AlreadyExists());
+        }
+
         self.session
             .execute(&prepared_statement, (&row.vin, &row.engine_type, &ev_data))
             .await?;
@@ -89,7 +92,7 @@ impl Queries for ScyllaQueries {
     async fn find_one_vehicle(&self, vin: &str) -> Result<Vehicle, AppError> {
         let prepared_statement = self
             .get_prepared_statement_helper(
-                &self.create_vehicle,
+                &self.find_one_vehicle,
                 "SELECT * FROM vehicles WHERE vin = ?",
             )
             .await?;

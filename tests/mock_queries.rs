@@ -7,7 +7,6 @@ use async_trait::async_trait;
 use hello::error::AppError;
 use hello::vehicle::Vehicle;
 use hello::{db::queries::Queries, result::AppResult};
-use scylla::transport::errors::{DbError, QueryError};
 
 pub struct MockQueries {
     map: Arc<RwLock<HashMap<String, Vehicle>>>,
@@ -41,16 +40,7 @@ impl Queries for MockQueries {
     async fn create_vehicle(&self, vehicle: &Vehicle) -> AppResult<()> {
         let mut map = self.map.write().unwrap();
         match map.entry(vehicle.vin.to_string()) {
-            Entry::Occupied(_) => {
-                return Err(QueryError::DbError(
-                    DbError::AlreadyExists {
-                        keyspace: "hello".to_string(),
-                        table: "vehicle".to_string(),
-                    },
-                    "Vehicle already exists".to_string(),
-                )
-                .into())
-            }
+            Entry::Occupied(_) => return Err(AppError::AlreadyExists()),
             Entry::Vacant(e) => e.insert(vehicle.clone()),
         };
 
