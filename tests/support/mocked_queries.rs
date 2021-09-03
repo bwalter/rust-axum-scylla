@@ -8,13 +8,13 @@ use hello::error::AppError;
 use hello::vehicle::Vehicle;
 use hello::{db::queries::Queries, result::AppResult};
 
-pub struct MockQueries {
+pub struct MockedQueries {
     map: Arc<RwLock<HashMap<String, Vehicle>>>,
 }
 
-impl MockQueries {
+impl MockedQueries {
     pub fn new() -> Self {
-        MockQueries {
+        MockedQueries {
             map: Arc::new(RwLock::new(HashMap::new())),
         }
     }
@@ -32,7 +32,7 @@ impl MockQueries {
 }
 
 #[async_trait]
-impl Queries for MockQueries {
+impl Queries for MockedQueries {
     async fn create_tables_if_not_exist(&self) -> AppResult<()> {
         Ok(())
     }

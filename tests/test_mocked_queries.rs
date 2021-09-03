@@ -12,12 +12,14 @@ use hello::{
     vehicle::{Engine, Vehicle},
 };
 
-mod mock_queries;
+use crate::support::mocked_queries::MockedQueries;
+
+mod support;
 
 #[tokio::test]
 async fn test_create_vehicle() -> Result<()> {
     // Start server with mock queries
-    let queries = Arc::new(mock_queries::MockQueries::new());
+    let queries = Arc::new(MockedQueries::new());
     let addr = serve(queries.clone()).await?;
 
     let vehicle_json = json!({
@@ -60,7 +62,7 @@ async fn test_create_vehicle() -> Result<()> {
 #[tokio::test]
 async fn test_get_vehicle() -> Result<()> {
     // Start server with mock queries
-    let queries = Arc::new(mock_queries::MockQueries::new());
+    let queries = Arc::new(MockedQueries::new());
     let addr = serve(queries.clone()).await?;
 
     let client = reqwest::Client::new();

@@ -2,11 +2,6 @@
 name = "hello"
 version = "0.1.0"
 edition = "2018"
-autotests = false
-
-[[test]]
-name = "integration_with_mocked_queries"
-path = "tests/test_mocked_queries.rs"
 
 [dependencies]
 anyhow = "1.0"
