@@ -28,9 +28,9 @@ $ RUST_LOG=hello=debug,tower_http::trace=debug cargo run -- --addr <scylla_ip_ad
 
 Create vehicles:
 ```
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin1","engine":{"type": "Combustion"}}'
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin2","engine":{"type": "Ev", "battery_capacity_in_kwh": 62, "soc_in_percent": 74}}
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin3","engine":{"type": "Phev"}}'
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin1","engine":"Combustion"}'
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin2","engine":"Ev", ev_data: {"battery_capacity_in_kwh": 62, "soc_in_percent": 74}}
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin3","engine":"Phev"}'
 ```
 
 Find vehicles by vin:
