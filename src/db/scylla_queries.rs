@@ -78,12 +78,12 @@ impl Queries for ScyllaQueries {
 
         // TODO: check if the insert query has been applied, instead, as soon as lightweight transactions are supported
         // -> see https://github.com/scylladb/scylla-rust-driver/issues/100
-        if let Ok(_) = self.find_one_vehicle(&vehicle.vin).await {
+        if self.find_one_vehicle(&vehicle.vin).await.is_ok() {
             return Err(AppError::AlreadyExists());
         }
 
         self.session
-            .execute(&prepared_statement, (&row.vin, &row.engine_type, &ev_data))
+            .execute(prepared_statement, (&row.vin, &row.engine_type, &ev_data))
             .await?;
 
         Ok(())
@@ -99,19 +99,17 @@ impl Queries for ScyllaQueries {
 
         let rows = self
             .session
-            .execute(&prepared_statement, (vin,))
+            .execute(prepared_statement, (vin,))
             .await?
             .rows
-            .ok_or_else(|| AppError::NotFound())?;
+            .ok_or_else(AppError::NotFound)?;
 
         let first_vehicle_row = rows
             .into_typed::<VehicleRow>()
             .next()
-            .ok_or_else(|| AppError::NotFound())??;
+            .ok_or_else(AppError::NotFound)??;
 
-        let vehicle = first_vehicle_row
-            .to_vehicle()
-            .ok_or_else(|| AppError::NotFound())?;
+        let vehicle = first_vehicle_row.to_vehicle()?;
 
         Ok(vehicle)
     }
@@ -125,11 +123,7 @@ impl ScyllaQueries {
     ) -> Result<&'a PreparedStatement, AppError> {
         query_once_cell
             .get_or_init(async {
-                let statement = self
-                    .session
-                    .prepare(query_str)
-                    .await
-                    .map_err(|e| Arc::new(e))?;
+                let statement = self.session.prepare(query_str).await.map_err(Arc::new)?;
                 Ok(Arc::new(statement))
             })
             .await

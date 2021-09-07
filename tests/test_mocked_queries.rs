@@ -29,13 +29,12 @@ async fn test_create_vehicle() -> Result<()> {
 
     let client = reqwest::Client::new();
 
-    // Insert vehicle
+    // Insert vehicle => CREATED
     let res = client
         .post(format!("http://{}/vehicle", addr))
         .json(&vehicle_json)
         .send()
         .await?;
-
     assert_eq!(res.status(), StatusCode::CREATED);
 
     // Check returned vehicle
@@ -48,14 +47,14 @@ async fn test_create_vehicle() -> Result<()> {
         Some(serde_json::from_value(vehicle_json.clone())?),
     );
 
-    // Insert vehicle again
+    // Insert the same vehicle again => CONFLICT
     let res = client
         .post(format!("http://{}/vehicle", addr))
         .json(&vehicle_json)
         .send()
         .await?;
-
     assert_eq!(res.status(), StatusCode::CONFLICT);
+
     Ok(())
 }
 
@@ -67,13 +66,12 @@ async fn test_get_vehicle() -> Result<()> {
 
     let client = reqwest::Client::new();
 
-    // Get non-existing vehicle
+    // Get non-existing vehicle => NOT_FOUND
     let res = client
         .get(format!("http://{}/vehicle", addr))
         .query(&[("vin", "vin1")])
         .send()
         .await?;
-
     assert_eq!(res.status(), StatusCode::NOT_FOUND);
 
     // Add vehicle to database
@@ -84,13 +82,12 @@ async fn test_get_vehicle() -> Result<()> {
     };
     queries.insert_vehicle(vehicle.clone());
 
-    // Get existing vehicle
+    // Get existing vehicle => OK
     let res = client
         .get(format!("http://{}/vehicle", addr))
         .query(&[("vin", "vin1")])
         .send()
         .await?;
-
     assert_eq!(res.status(), StatusCode::OK);
 
     // Check returned vehicle

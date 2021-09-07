@@ -5,6 +5,8 @@ use std::str::FromStr;
 use std::string::ToString;
 use strum_macros::{AsRefStr, EnumString, ToString};
 
+use crate::error::AppError;
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Vehicle {
     pub vin: String,
@@ -46,15 +48,14 @@ impl VehicleRow {
         }
     }
 
-    pub fn to_vehicle(self) -> Option<Vehicle> {
-        if let Some(engine) = Engine::from_str(&self.engine_type).ok() {
-            Some(Vehicle {
-                vin: self.vin,
-                engine,
-                ev_data: self.ev_data,
-            })
-        } else {
-            None
-        }
+    pub fn to_vehicle(self) -> Result<Vehicle, AppError> {
+        let engine = Engine::from_str(&self.engine_type)
+            .map_err(|_| AppError::ConversionError("VehicleRow to Vehicle"))?;
+
+        Ok(Vehicle {
+            vin: self.vin,
+            engine,
+            ev_data: self.ev_data,
+        })
     }
 }

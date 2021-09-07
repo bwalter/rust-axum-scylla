@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
 
     // TCP listener
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    let listener = TcpListener::bind(&addr).expect("Could not bind ephemeral socket");
+    let listener = TcpListener::bind(&addr)?;
 
     // Start server
     hello::start(listener, queries, None).await
