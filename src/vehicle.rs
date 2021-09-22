@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use strum_macros::{AsRefStr, EnumString, ToString};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Vehicle {
@@ -12,7 +11,15 @@ pub struct Vehicle {
     pub ev_data: Option<EvData>,
 }
 
-#[derive(Serialize, Deserialize, ToString, AsRefStr, EnumString, Clone, PartialEq, Debug)]
+#[derive(
+    Serialize,
+    Deserialize,
+    Clone,
+    PartialEq,
+    Debug,
+    strum_macros::ToString,
+    strum_macros::EnumString,
+)]
 pub enum Engine {
     Combustion,
     Phev,
