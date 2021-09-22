@@ -1,4 +1,6 @@
-# Sample web application using [Axum](https://github.com/tokio-rs/axum) and [Scylla](https://www.scylladb.com)
+# rust-axum-scylla
+
+Sample web application using [Axum](https://github.com/tokio-rs/axum) and [Scylla](https://www.scylladb.com)
 
 ### Start Scylla DB using Docker
 
@@ -13,24 +15,23 @@ docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hell
 
 ### Build and run demo app
 
-Option 1: Via docker
-```
-$ docker build -t rust-axum-scylla .
-$ docker run --rm -it rust-axum-scylla --addr <scylla_ip_addr>
-```
-
-Option 2: Directly via Cargo
 ```
 $ RUST_LOG=hello=debug,tower_http::trace=debug cargo run -- --addr <scylla_ip_addr>
 ```
 
-### Test Rest API
+### Test (cargo)
+
+```
+$ cargo test
+```
+
+### Test (curl)
 
 Create vehicles:
 ```
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin1","engine":"Combustion"}'
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin2","engine":"Ev", ev_data: {"battery_capacity_in_kwh": 62, "soc_in_percent": 74}}
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin3","engine":"Phev"}'
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin1","engine_type":"Combustion"}'
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin2","engine_type":"Ev", ev_data: {"battery_capacity_in_kwh": 62, "soc_in_percent": 74}}
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin3","engine_type":"Phev"}'
 ```
 
 Find vehicles by vin:
@@ -43,7 +44,6 @@ $ curl -v -H "Accept: application/json" -H "Content-type: application/json" loca
 ```
 $ docker exec -it hello-scylla nodetool status
 $ docker exec -it hello-scylla cqlsh
-cqlsh> USE hello;
-cqlsh:hello> SELECT * from vehicles;
+cqlsh> SELECT * from hello.vehicles;
 ```
 
