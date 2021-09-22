@@ -1,8 +1,7 @@
 use axum::{
     body::{Bytes, Full},
-    http::Response,
+    http,
 };
-use std::result::Result;
 
 use crate::error::AppError;
 
@@ -10,7 +9,7 @@ use crate::error::AppError;
 pub type AppResponseBody = Full<Bytes>;
 
 // e.g.: (StatusCode::Ok, Json(user)).into_response()
-pub type AppResponse = Response<AppResponseBody>;
+pub type AppResponse = http::Response<AppResponseBody>;
 
 // Return value of route handlers
-pub type AppResponseResult = Result<AppResponse, AppError>;
+pub type AppResponseResult = std::result::Result<AppResponse, AppError>;

@@ -23,6 +23,7 @@ async fn main() -> Result<()> {
     let args: CmdLineArgs = argh::from_env();
 
     // Initialize tracing
+    //console_subscriber::init();
     tracing_subscriber::fmt::init();
 
     // Start DB session and Queries
@@ -33,5 +34,5 @@ async fn main() -> Result<()> {
     let listener = TcpListener::bind(&addr)?;
 
     // Start server
-    hello::start(listener, queries, None).await
+    hello::start(listener, queries).await
 }

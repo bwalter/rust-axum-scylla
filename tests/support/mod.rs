@@ -1,1 +1,1 @@
-pub mod mocked_queries;
+pub mod test_queries;

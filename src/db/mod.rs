@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use crate::error::AppError;
 
-use crate::db::queries::Queries;
 use crate::db::scylla_queries::ScyllaQueries;
 
 pub mod queries;
+pub mod scylla_errors;
 pub mod scylla_queries;
 
 pub async fn start_db_session_and_create_queries(
@@ -21,9 +21,8 @@ pub async fn start_db_session_and_create_queries(
 
     let db_session = Arc::new(db_session);
 
-    // Create (lazily-prepared) queries and tables
-    let queries = Arc::new(ScyllaQueries::new(db_session));
-    queries.create_tables_if_not_exist().await?;
+    // Create (lazily-prepared) queries
+    let queries = ScyllaQueries::try_new(db_session).await?;
 
-    Ok(queries)
+    Ok(Arc::new(queries))
 }
