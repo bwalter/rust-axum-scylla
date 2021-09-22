@@ -1,4 +1,4 @@
-# Sample web application using Axum and Scylla
+# Sample web application using [Axum](https://github.com/tokio-rs/axum) and [Scylla](https://www.scylladb.com)
 
 ### Start Scylla DB using Docker
 
@@ -46,3 +46,4 @@ $ docker exec -it hello-scylla cqlsh
 cqlsh> USE hello;
 cqlsh:hello> SELECT * from vehicles;
 ```
+
