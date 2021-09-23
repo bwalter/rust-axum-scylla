@@ -11,12 +11,30 @@ env:
 
 jobs:
   build:
+    runs-on: ubuntu-20.04
 
-    runs-on: ubuntu-latest
+    services:
+      scylladb:
+        image: scylladb/scylla
+        ports:
+          - 9042:9042
+        options: --health-cmd "cqlsh --debug" --health-interval 5s --health-retries 10
+        volumes:
+          - ${{ github.workspace }}:/workspace
 
     steps:
     - uses: actions/checkout@v2
+    - name: Format
+      run: cargo fmt --all -- --check
+    - name: Check
+      run: cargo check
+    - name: Clippy
+      run: cargo clippy -- -D clippy::unwrap_used
     - name: Build
       run: cargo build
-    - name: Run tests
-      run: cargo test
+    - name: Unit tests
+      run: cargo test --lib
+    - name: Integration tests
+      # test threads must be one because else database tests will run in parallel and will result in flaky tests
+      run: cargo test --test '*' -- --test-threads=1
+
