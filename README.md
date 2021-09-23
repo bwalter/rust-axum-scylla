@@ -5,38 +5,44 @@ Sample web application using [Axum](https://github.com/tokio-rs/axum) and [Scyll
 ### Start Scylla DB using Docker
 
 ```
-$ docker run --name hello-scylla -d scylladb/scylla
-```
-
-Get IP address:
-```
-docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hello-scylla 
+$ docker run --name hello-scylla -d -p 9042:9042 scylladb/scylla
 ```
 
 ### Build and run demo app
 
 ```
-$ RUST_LOG=hello=debug,tower_http::trace=debug cargo run -- --addr <scylla_ip_addr>
+$ RUST_LOG=hello=debug,tower_http::trace=debug cargo run
 ```
 
 ### Test (cargo)
 
+All tests:
 ```
 $ cargo test
+```
+
+Unit tests only:
+```
+$ cargo test --lib
+```
+
+Integration tests only:
+```
+$ cargo test --test '*'
 ```
 
 ### Test (curl)
 
 Create vehicles:
 ```
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin1","engine_type":"Combustion"}'
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin2","engine_type":"Ev", ev_data: {"battery_capacity_in_kwh": 62, "soc_in_percent": 74}}
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -d '{"vin":"vin3","engine_type":"Phev"}'
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicle -d '{"vin":"vin1","engine_type":"Combustion"}'
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicle -d '{"vin":"vin2","engine_type":"Ev", ev_data: {"battery_capacity_in_kwh": 62, "soc_in_percent": 74}}
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicle -d '{"vin":"vin3","engine_type":"Phev"}'
 ```
 
 Find vehicles by vin:
 ```
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicles -G --data-urlencode 'vin=vin2'
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicle -G --data-urlencode 'vin=vin2'
 ```
 
 ### Check database

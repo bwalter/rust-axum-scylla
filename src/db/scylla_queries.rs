@@ -25,19 +25,19 @@ impl std::fmt::Debug for ScyllaQueries {
 }
 
 impl ScyllaQueries {
-    pub async fn try_new(session: Arc<Session>) -> AppResult<Self> {
-        // Create hello keyspace, user types and tables
+    pub async fn try_new(session: Arc<Session>, keyspace: String) -> AppResult<Self> {
+        // Create keyspace, user types and tables
         let cql_array = [
-            "CREATE KEYSPACE IF NOT EXISTS hello WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : 1}",
-            "CREATE TYPE IF NOT EXISTS hello.ev_data (battery_capacity_in_kwh int, soc_in_percent int)",
-            "CREATE TABLE IF NOT EXISTS hello.vehicles (vin text primary key, engine_type text, ev_data ev_data)"
+            format!("CREATE KEYSPACE IF NOT EXISTS {} WITH REPLICATION = {{'class' : 'SimpleStrategy', 'replication_factor' : 1}}", keyspace),
+            format!("CREATE TYPE IF NOT EXISTS {}.ev_data (battery_capacity_in_kwh int, soc_in_percent int)", keyspace),
+            format!("CREATE TABLE IF NOT EXISTS {}.vehicles (vin text primary key, engine_type text, ev_data ev_data)", keyspace),
         ];
         for cql in cql_array.iter() {
-            session.query(*cql, &[]).await?;
+            session.query(cql.as_ref(), &[]).await?;
         }
 
-        // Use hello keyspace
-        session.use_keyspace("hello", false).await?;
+        // Use keyspace
+        session.use_keyspace(&keyspace, false).await?;
 
         // Prepare "insert vehicle" statement
         let cql = format!(

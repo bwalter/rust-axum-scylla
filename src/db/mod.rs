@@ -22,7 +22,7 @@ pub async fn start_db_session_and_create_queries(
     let db_session = Arc::new(db_session);
 
     // Create (lazily-prepared) queries
-    let queries = ScyllaQueries::try_new(db_session).await?;
+    let queries = ScyllaQueries::try_new(db_session, "hello".to_string()).await?;
 
     Ok(Arc::new(queries))
 }

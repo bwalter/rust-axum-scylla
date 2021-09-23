@@ -13,15 +13,9 @@ use hello::{
     vehicle::{Engine, Vehicle},
 };
 
-use crate::support::test_queries::TestQueries;
-
-mod support;
-
 #[tokio::test]
 async fn test_post_vehicle() -> Result<()> {
-    // Start server with mock queries
-    let queries = Arc::new(create_test_queries());
-    let addr = serve(queries.clone()).await?;
+    let ctx = Context::try_new().await?;
 
     let vehicle_json = json!({
         "vin": "vin1",
@@ -36,7 +30,7 @@ async fn test_post_vehicle() -> Result<()> {
 
     // Insert vehicle => CREATED
     let res = client
-        .post(format!("http://{}/vehicle", addr))
+        .post(format!("http://{}/vehicle", ctx.addr))
         .json(&vehicle_json)
         .send()
         .await?;
@@ -48,13 +42,13 @@ async fn test_post_vehicle() -> Result<()> {
 
     // Ensure that it has been added to the database
     assert_eq!(
-        queries.find_one_vehicle("vin1").await.ok(),
+        ctx.queries.find_one_vehicle("vin1").await.ok(),
         Some(serde_json::from_value(vehicle_json.clone())?),
     );
 
     // Insert the same vehicle again => CONFLICT
     let res = client
-        .post(format!("http://{}/vehicle", addr))
+        .post(format!("http://{}/vehicle", ctx.addr))
         .json(&vehicle_json)
         .send()
         .await?;
@@ -65,15 +59,13 @@ async fn test_post_vehicle() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_vehicle() -> Result<()> {
-    // Start server with mock queries
-    let queries = Arc::new(create_test_queries());
-    let addr = serve(queries.clone()).await?;
+    let ctx = Context::try_new().await?;
 
     let client = reqwest::Client::new();
 
     // Get non-existing vehicle => NOT_FOUND
     let res = client
-        .get(format!("http://{}/vehicle", addr))
+        .get(format!("http://{}/vehicle", ctx.addr))
         .query(&[("vin", "vin1")])
         .send()
         .await?;
@@ -85,11 +77,11 @@ async fn test_get_vehicle() -> Result<()> {
         engine: Engine::Combustion,
         ev_data: None,
     };
-    queries.create_vehicle(&vehicle).await?;
+    ctx.queries.create_vehicle(&vehicle).await?;
 
     // Get existing vehicle => OK
     let res = client
-        .get(format!("http://{}/vehicle", addr))
+        .get(format!("http://{}/vehicle", ctx.addr))
         .query(&[("vin", "vin1")])
         .send()
         .await?;
@@ -106,9 +98,44 @@ fn json_value(s: &str) -> Result<serde_json::Value> {
     Ok(serde_json::from_str::<serde_json::Value>(s)?)
 }
 
-async fn serve(queries: Arc<dyn Queries>) -> Result<SocketAddr> {
-    //tracing_subscriber::fmt::init();
+struct Context {
+    queries: Arc<dyn Queries>,
+    addr: SocketAddr,
+}
 
+impl Context {
+    async fn try_new() -> Result<Self> {
+        //tracing_subscriber::fmt::init();
+
+        let queries = Arc::new(create_test_queries().await?);
+        let addr = serve(queries.clone()).await?;
+
+        Ok(Self { queries, addr })
+    }
+}
+
+impl Drop for Context {
+    fn drop(&mut self) {}
+}
+async fn create_test_queries() -> Result<impl Queries> {
+    use hello::db::scylla_queries::ScyllaQueries;
+    use scylla::SessionBuilder;
+
+    // Note: returning TestQueries, could be also the real DB queries, though...
+    let uri = std::env::var("SCYLLA_URI").unwrap_or_else(|_| "127.0.0.1:9042".to_string());
+    let session = SessionBuilder::new().known_node(uri).build().await.unwrap();
+
+    // Delete usespace
+    session
+        .query("DROP KEYSPACE hello_test", &[])
+        .await
+        .unwrap_or_default();
+
+    let queries = ScyllaQueries::try_new(Arc::new(session), "hello_test".to_string()).await?;
+    Ok(queries)
+}
+
+async fn serve(queries: Arc<dyn Queries>) -> Result<SocketAddr> {
     // TCP listener
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
     let listener = TcpListener::bind(&addr)?;
@@ -126,9 +153,4 @@ async fn serve(queries: Arc<dyn Queries>) -> Result<SocketAddr> {
     tokio::spawn(async move { server.await });
 
     Ok(addr)
-}
-
-fn create_test_queries() -> impl Queries {
-    // Note: returning TestQueries, could be also the real DB queries, though...
-    TestQueries::new()
 }
