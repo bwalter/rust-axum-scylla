@@ -35,7 +35,7 @@ impl Queries for TestQueries {
 
     async fn find_one_vehicle(&self, vin: &str) -> AppResult<Vehicle> {
         let map = self.map.read().unwrap();
-        let vehicle = map.get(vin).ok_or_else(|| AppError::NotFound("Vehicle"))?;
+        let vehicle = map.get(vin).ok_or(AppError::NotFound("Vehicle"))?;
 
         Ok(vehicle.clone())
     }

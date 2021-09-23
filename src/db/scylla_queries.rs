@@ -106,6 +106,7 @@ struct EvDataUserType {
     pub soc_in_percent: i32,
 }
 
+// Vehicle -> VehicleRow
 impl From<&Vehicle> for VehicleRow {
     fn from(vehicle: &Vehicle) -> Self {
         let ev_data = vehicle.ev_data.as_ref().map(EvDataUserType::from);
@@ -118,6 +119,7 @@ impl From<&Vehicle> for VehicleRow {
     }
 }
 
+// VehicleRow -> Vehicle
 impl TryFrom<&VehicleRow> for Vehicle {
     type Error = AppError;
 
@@ -139,6 +141,7 @@ impl TryFrom<&VehicleRow> for Vehicle {
     }
 }
 
+// EvData -> EvDataUserType
 impl From<&EvData> for EvDataUserType {
     fn from(ev_data: &EvData) -> Self {
         EvDataUserType {
@@ -148,6 +151,7 @@ impl From<&EvData> for EvDataUserType {
     }
 }
 
+// EvDataUserType -> EvData
 impl TryFrom<&EvDataUserType> for EvData {
     type Error = AppError;
 
