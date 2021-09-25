@@ -28,8 +28,10 @@ $ cargo test --lib
 
 Integration tests only:
 ```
-$ cargo test --test '*'
+$ cargo test --test '*' -- --test-threads=1
 ```
+
+Note: we need to ensure that the tests are not concurrently executed because it would mess up the checks.
 
 ### Test (curl)
 

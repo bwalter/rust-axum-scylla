@@ -28,11 +28,8 @@ use crate::state::State;
 /// Start the server and wait (forever)
 #[tracing::instrument]
 pub async fn start(listener: TcpListener, queries: Arc<dyn Queries>) -> Result<()> {
-    // Shared state
-    let shared_state = Arc::new(RwLock::new(State {}));
-
     // Create app
-    let app = app(shared_state, queries);
+    let app = create_app(queries);
 
     // Run our app with hyper
     tracing::debug!("listening on {:?}", listener);
@@ -43,7 +40,11 @@ pub async fn start(listener: TcpListener, queries: Arc<dyn Queries>) -> Result<(
     Ok(())
 }
 
-pub fn app(shared_state: Arc<RwLock<State>>, queries: Arc<dyn Queries>) -> Router<BoxRoute> {
+#[tracing::instrument]
+pub fn create_app(queries: Arc<dyn Queries>) -> Router<BoxRoute> {
+    // Shared state
+    let shared_state = Arc::new(RwLock::new(State {}));
+
     // Middlewares: Tower layer stack
     let middleware_stack = ServiceBuilder::new()
         .timeout(Duration::from_secs(5))
