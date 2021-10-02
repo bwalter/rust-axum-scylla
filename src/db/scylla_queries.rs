@@ -16,6 +16,7 @@ pub struct ScyllaQueries {
     session: Arc<Session>,
     insert_vehicle_statement: PreparedStatement,
     select_vehicle_statement: PreparedStatement,
+    delete_vehicle_statement: PreparedStatement,
 }
 
 impl std::fmt::Debug for ScyllaQueries {
@@ -50,10 +51,15 @@ impl ScyllaQueries {
         let cql = "SELECT * from vehicles where vin = ?";
         let select_vehicle_statement = session.prepare(cql).await?;
 
+        // Prepare "delete vehicle" statement
+        let cql = "DELETE from vehicles where vin = ?";
+        let delete_vehicle_statement = session.prepare(cql).await?;
+
         Ok(ScyllaQueries {
             session,
             insert_vehicle_statement,
             select_vehicle_statement,
+            delete_vehicle_statement,
         })
     }
 }
@@ -90,6 +96,20 @@ impl Queries for ScyllaQueries {
             .ok_or(AppError::NotFound("Vehicle"))??;
 
         Vehicle::try_from(&first_vehicle_row)
+    }
+
+    async fn delete_one_vehicle(&self, vin: &str) -> AppResult<()> {
+        // Ensure that the vehicle can be found
+        // TODO: check if the insert query has been applied, instead, as soon as lightweight transactions are supported
+        // -> see https://github.com/scylladb/scylla-rust-driver/issues/100
+        let _ = self.find_one_vehicle(vin).await?;
+
+        self.session
+            .execute(&self.delete_vehicle_statement, (vin,))
+            .await
+            .map_err(|_| AppError::NotFound("Vehicle"))?;
+
+        Ok(())
     }
 }
 

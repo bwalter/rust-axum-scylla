@@ -12,4 +12,5 @@ use crate::{result::AppResult, vehicle::Vehicle};
 pub trait Queries: std::fmt::Debug + Send + Sync + 'static {
     async fn create_vehicle(&self, vehicle: &Vehicle) -> AppResult<()>;
     async fn find_one_vehicle(&self, vin: &str) -> AppResult<Vehicle>;
+    async fn delete_one_vehicle(&self, vin: &str) -> AppResult<()>;
 }

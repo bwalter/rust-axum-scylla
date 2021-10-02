@@ -7,7 +7,6 @@ pub mod state;
 pub mod vehicle;
 
 use anyhow::Result;
-use axum::handler::{get, post};
 use axum::response::IntoResponse;
 use axum::routing::BoxRoute;
 use axum::{AddExtensionLayer, Router};
@@ -52,9 +51,13 @@ pub fn create_app(queries: Arc<dyn Queries>) -> Router<BoxRoute> {
         .into_inner();
 
     // Route
+    use axum::handler::{get, post};
     Router::new()
-        .route("/vehicle", get(handlers::get_vehicle))
         .route("/vehicle", post(handlers::post_vehicle))
+        .route(
+            "/vehicle/:vin",
+            get(handlers::get_vehicle).delete(handlers::delete_vehicle),
+        )
         .layer(middleware_stack)
         .layer(AddExtensionLayer::new(queries))
         .layer(AddExtensionLayer::new(shared_state))

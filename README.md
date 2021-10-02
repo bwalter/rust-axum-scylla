@@ -44,7 +44,7 @@ $ curl -v -H "Accept: application/json" -H "Content-type: application/json" loca
 
 Find vehicles by vin:
 ```
-$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicle -G --data-urlencode 'vin=vin2'
+$ curl -v -H "Accept: application/json" -H "Content-type: application/json" localhost:3000/vehicle/vin2 -G
 ```
 
 ### Check database
