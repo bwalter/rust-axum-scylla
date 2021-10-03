@@ -1,0 +1,23 @@
+name: Docker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  docker-image:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set SHORT_SHA env
+      run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+    - name: Build Docker image
+      run: docker build . --file Dockerfile --tag hello-image:$SHORT_SHA && docker save hello-image > hello-image.tar
+    - name: Upload docker image artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: hello-image-${{ env.SHORT_SHA }}.tar
+        path: ./hello-image.tar

@@ -40,7 +40,9 @@ async fn main() -> Result<()> {
     axum::Server::from_tcp(listener)?
         .serve(router.into_make_service())
         .with_graceful_shutdown(async {
-            tokio::signal::ctrl_c().await.unwrap();
+            tokio::signal::ctrl_c()
+                .await
+                .expect("failed to listen for signal");
             tracing::error!("Ctrl-C received!");
         })
         .await?;
