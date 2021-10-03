@@ -6,26 +6,26 @@ use std::str::FromStr;
 use std::{string::ToString, sync::Arc};
 
 use crate::{
-    db::queries::Queries,
+    db::queries::VehicleQueries,
     error::AppError,
+    model::vehicle::{Engine, EvData, Vehicle},
     result::AppResult,
-    vehicle::{Engine, EvData, Vehicle},
 };
 
-pub struct ScyllaQueries {
+pub struct ScyllaVehicleQueries {
     session: Arc<Session>,
     insert_vehicle_statement: PreparedStatement,
     select_vehicle_statement: PreparedStatement,
     delete_vehicle_statement: PreparedStatement,
 }
 
-impl std::fmt::Debug for ScyllaQueries {
+impl std::fmt::Debug for ScyllaVehicleQueries {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ScyllaQueries").finish()
     }
 }
 
-impl ScyllaQueries {
+impl ScyllaVehicleQueries {
     pub async fn try_new(session: Arc<Session>, keyspace: String) -> AppResult<Self> {
         // Create keyspace, user types and tables
         let cql_array = [
@@ -55,7 +55,7 @@ impl ScyllaQueries {
         let cql = "DELETE from vehicles where vin = ?";
         let delete_vehicle_statement = session.prepare(cql).await?;
 
-        Ok(ScyllaQueries {
+        Ok(ScyllaVehicleQueries {
             session,
             insert_vehicle_statement,
             select_vehicle_statement,
@@ -65,7 +65,7 @@ impl ScyllaQueries {
 }
 
 #[async_trait]
-impl Queries for ScyllaQueries {
+impl VehicleQueries for ScyllaVehicleQueries {
     async fn create_vehicle(&self, vehicle: &Vehicle) -> AppResult<()> {
         let row = VehicleRow::from(vehicle);
 

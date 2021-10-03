@@ -2,20 +2,19 @@ use std::net::{SocketAddr, TcpListener};
 
 use anyhow::Result;
 
-use hello::db;
+use hello::{db, router};
 
 /// A sample Rust backend app with Rest API and Scylla DB
 #[derive(argh::FromArgs)]
 struct CmdLineArgs {
-    /// hostname or address of the ScyllaDB node (e.g. 172.17.0.2)
-    #[argh(option)]
+    /// hostname or address of the ScyllaDB node (default: localhost)
+    #[argh(option, default = "\"localhost\".to_string()")]
     addr: String,
 
     /// port of the ScyllaDB node (default: 9042)
     #[argh(option, default = "9042")]
     port: u16,
 }
-
 // Hint: start with RUST_LOG=hello=debug,tower_http=debug ./hello -- --help
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -33,6 +32,18 @@ async fn main() -> Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = TcpListener::bind(&addr)?;
 
+    // Create router
+    let router = router::create_router(queries);
+
     // Start server
-    hello::start(listener, queries).await
+    tracing::debug!("listening on {:?}", listener);
+    axum::Server::from_tcp(listener)?
+        .serve(router.into_make_service())
+        .with_graceful_shutdown(async {
+            tokio::signal::ctrl_c().await.unwrap();
+            tracing::error!("Ctrl-C received!");
+        })
+        .await?;
+
+    Ok(())
 }

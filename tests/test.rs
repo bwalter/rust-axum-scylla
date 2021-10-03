@@ -8,8 +8,8 @@ use std::{
 
 use hello::{
     self,
-    db::queries::Queries,
-    vehicle::{Engine, Vehicle},
+    db::queries::VehicleQueries,
+    model::vehicle::{Engine, Vehicle},
 };
 
 #[tokio::test]
@@ -130,7 +130,7 @@ fn json_value(s: &str) -> Result<serde_json::Value> {
 }
 
 struct Context {
-    queries: Arc<dyn Queries>,
+    queries: Arc<dyn VehicleQueries>,
     addr: SocketAddr,
 }
 
@@ -146,8 +146,8 @@ impl Context {
 impl Drop for Context {
     fn drop(&mut self) {}
 }
-async fn create_test_queries() -> Result<impl Queries> {
-    use hello::db::scylla_queries::ScyllaQueries;
+async fn create_test_queries() -> Result<impl VehicleQueries> {
+    use hello::db::scylla::vehicle_queries::ScyllaVehicleQueries;
     use scylla::SessionBuilder;
 
     let uri = std::env::var("SCYLLA_URI").unwrap_or_else(|_| "127.0.0.1:9042".to_string());
@@ -159,22 +159,23 @@ async fn create_test_queries() -> Result<impl Queries> {
         .await
         .unwrap_or_default();
 
-    let queries = ScyllaQueries::try_new(Arc::new(session), "hello_test".to_string()).await?;
+    let queries =
+        ScyllaVehicleQueries::try_new(Arc::new(session), "hello_test".to_string()).await?;
     Ok(queries)
 }
 
-async fn serve(queries: Arc<dyn Queries>) -> Result<SocketAddr> {
+async fn serve(queries: Arc<dyn VehicleQueries>) -> Result<SocketAddr> {
     // TCP listener
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
     let listener = TcpListener::bind(&addr)?;
     let addr = listener.local_addr()?;
 
-    // App
-    let app = hello::create_app(queries);
+    // Router
+    let router = hello::router::create_router(queries);
 
-    // Run our app with hyper
+    // Run our app
     tracing::debug!("listening on {:?}", listener);
-    let server = axum::Server::from_tcp(listener)?.serve(app.into_make_service());
+    let server = axum::Server::from_tcp(listener)?.serve(router.into_make_service());
     tokio::spawn(async move { server.await });
 
     Ok(addr)

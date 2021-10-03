@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{result::AppResult, vehicle::Vehicle};
+use crate::{model::vehicle::Vehicle, result::AppResult};
 
 /// Define all the queries for DB abstraction
 ///
@@ -9,7 +9,7 @@ use crate::{result::AppResult, vehicle::Vehicle};
 /// - Mocked database (for tests)
 #[mockall::automock]
 #[async_trait]
-pub trait Queries: std::fmt::Debug + Send + Sync + 'static {
+pub trait VehicleQueries: std::fmt::Debug + Send + Sync + 'static {
     async fn create_vehicle(&self, vehicle: &Vehicle) -> AppResult<()>;
     async fn find_one_vehicle(&self, vin: &str) -> AppResult<Vehicle>;
     async fn delete_one_vehicle(&self, vin: &str) -> AppResult<()>;
