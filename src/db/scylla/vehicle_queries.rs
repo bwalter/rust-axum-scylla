@@ -113,33 +113,40 @@ impl VehicleQueries for ScyllaVehicleQueries {
     }
 }
 
-#[derive(scylla::FromRow, scylla::ValueList, field_names::FieldNames, Debug)]
+#[derive(PartialEq, scylla::FromRow, scylla::ValueList, field_names::FieldNames, Debug)]
 struct VehicleRow {
     vin: String,
     engine_type: String,
     ev_data: Option<EvDataUserType>,
 }
 
-#[derive(scylla::FromUserType, scylla::IntoUserType, Debug)]
+#[derive(PartialEq, scylla::FromUserType, scylla::IntoUserType, Debug)]
 struct EvDataUserType {
     pub battery_capacity_in_kwh: i32,
     pub soc_in_percent: i32,
 }
 
 // Vehicle -> VehicleRow
-impl From<&Vehicle> for VehicleRow {
-    fn from(vehicle: &Vehicle) -> Self {
+impl From<Vehicle> for VehicleRow {
+    fn from(vehicle: Vehicle) -> Self {
         let ev_data = vehicle.ev_data.as_ref().map(EvDataUserType::from);
 
         VehicleRow {
-            vin: vehicle.vin.clone(),
+            vin: vehicle.vin,
             engine_type: vehicle.engine.to_string(),
             ev_data,
         }
     }
 }
 
-// VehicleRow -> Vehicle
+// &Vehicle -> VehicleRow
+impl From<&Vehicle> for VehicleRow {
+    fn from(vehicle: &Vehicle) -> Self {
+        VehicleRow::from(vehicle.clone())
+    }
+}
+
+// &VehicleRow -> Vehicle
 impl TryFrom<&VehicleRow> for Vehicle {
     type Error = AppError;
 
@@ -180,5 +187,85 @@ impl TryFrom<&EvDataUserType> for EvData {
             battery_capacity_in_kwh: ev_data_user_type.battery_capacity_in_kwh,
             soc_in_percent: ev_data_user_type.soc_in_percent,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::error::AppError;
+    use crate::model::vehicle;
+
+    use super::*;
+
+    fn vehicle1() -> Vehicle {
+        Vehicle {
+            vin: "vin".to_string(),
+            engine: vehicle::Engine::Combustion,
+            ev_data: None,
+        }
+    }
+
+    fn vehicle1_row() -> VehicleRow {
+        VehicleRow {
+            vin: "vin".to_string(),
+            engine_type: "Combustion".to_string(),
+            ev_data: None,
+        }
+    }
+
+    fn vehicle2() -> Vehicle {
+        Vehicle {
+            vin: "vin".to_string(),
+            engine: vehicle::Engine::Combustion,
+            ev_data: Some(vehicle::EvData {
+                battery_capacity_in_kwh: 69,
+                soc_in_percent: 12,
+            }),
+        }
+    }
+
+    fn vehicle2_row() -> VehicleRow {
+        VehicleRow {
+            vin: "vin".to_string(),
+            engine_type: "Combustion".to_string(),
+            ev_data: Some(EvDataUserType {
+                battery_capacity_in_kwh: 69,
+                soc_in_percent: 12,
+            }),
+        }
+    }
+
+    fn invalid_vehicle_row() -> VehicleRow {
+        VehicleRow {
+            vin: "vin".to_string(),
+            engine_type: "Invalid".to_string(),
+            ev_data: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn model_to_row() {
+        assert_eq!(VehicleRow::from(vehicle1()), vehicle1_row());
+        assert_eq!(VehicleRow::from(&vehicle1()), vehicle1_row());
+
+        assert_eq!(VehicleRow::from(vehicle2()), vehicle2_row());
+        assert_eq!(VehicleRow::from(&vehicle2()), vehicle2_row());
+    }
+
+    #[tokio::test]
+    async fn row_to_model_ok() -> anyhow::Result<()> {
+        assert_eq!(Vehicle::try_from(&vehicle1_row())?, vehicle1());
+        assert_eq!(Vehicle::try_from(&vehicle2_row())?, vehicle2());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn row_to_model_error() {
+        // TODO: user assert_matches! when stable
+        match Vehicle::try_from(&invalid_vehicle_row()) {
+            Err(AppError::ConversionError(_)) => (),
+            _ => assert!(false),
+        }
     }
 }
