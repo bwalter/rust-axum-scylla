@@ -12,6 +12,7 @@ Features:
 ### Software Design
 
 Architecture:
+
 ![architecture image](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.github.com/bwalter/rust-axum-scylla/master/doc/architecture.plantuml)
 
 Libraries/tools:
@@ -31,6 +32,7 @@ Missing:
 - i18n based on [cargo-i18n](https://github.com/kellpossible/cargo-i18n) and the [fl!](https://crates.io/crates/i18n-embed-fl) macro
 
 Class diagram:
+
 ![classdiagram image](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.github.com/bwalter/rust-axum-scylla/master/doc/classdiagram.plantuml)
 
 
