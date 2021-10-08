@@ -1,0 +1,23 @@
+version: '1'
+services:
+  db:
+     image: scylladb/scylla
+     container_name: hello-scylla
+     restart: always
+     ports:
+       - "9042:9042"
+     healthcheck:
+       test: cqlsh --debug
+       interval: 5s
+       retries: 20
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    ports:
+      - "3000:3000"
+    command: ["--addr", "db"]
+    links:
+      - db

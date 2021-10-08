@@ -1,23 +1,57 @@
 # rust-axum-scylla
 
-Sample web application using [Axum](https://github.com/tokio-rs/axum) and [Scylla](https://www.scylladb.com)
+Useless, (almost) production-ready demo web application using:
+- [Axum](https://github.com/tokio-rs/axum)
+- [Scylla](https://www.scylladb.com)
 
-### Start Scylla DB using Docker
+Features:
+- Rest API to create, find and delete vehicles
+- Persistent storage in database
 
-```
-$ docker run --name hello-scylla -d -p 9042:9042 scylladb/scylla
-```
+
+### Software Design
+
+Architecture:
+![architecture image](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.github.com/bwalter/rust-axum-scylla/master/doc/architecture.plantuml)
+
+Libraries/tools:
+- Web application framework (based on [Axum](https://github.com/tokio-rs/axum))
+- [Scylla](https://www.scylladb.com) database with [rust driver](https://github.com/scylladb/scylla-rust-driver)
+- Command line arguments parsing based on [argh](https://github.com/google/argh)
+- Mocking based on [mockall](https://github.com/asomers/mockall)
+
+Continuous integration:
+- Github actions, see .github/workflows
+- Docker image generation, see Dockerfile
+
+Missing:
+- Session/Authentication
+- DB migration
+- OpenAPI generation
+- i18n based on [cargo-i18n](https://github.com/kellpossible/cargo-i18n) and the [fl!](https://crates.io/crates/i18n-embed-fl) macro
+
+Class diagram:
+![classdiagram image](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.github.com/bwalter/rust-axum-scylla/master/doc/classdiagram.plantuml)
+
 
 ### Build and run demo app
 
-Directly via cargo:
+Directly via cargo (pre-condition: Scylla DB already running)
 ```
 $ RUST_LOG=hello=debug,tower_http::trace=debug cargo run
 ```
 
 Via docker:
 ```
+$ docker run --name hello-scylla -d -p 9042:9042 scylladb/scylla
+$ docker build -t hello-app .
 $ docker run -t -i -p 3000:3000 --link=hello-scylla:scylla -it hello-app --addr scylla
+```
+
+Via docker-compose:
+```
+$ docker-compose build
+$ docker-compose up
 ```
 
 ### Test (cargo)

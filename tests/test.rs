@@ -8,7 +8,10 @@ use std::{
 
 use hello::{
     self,
-    db::queries::VehicleQueries,
+    db::{
+        queries::{Queries, VehicleQueries},
+        scylla::queries::ScyllaQueries,
+    },
     model::vehicle::{Engine, Vehicle},
 };
 
@@ -41,7 +44,11 @@ async fn test_post_vehicle() -> Result<()> {
 
     // Ensure that it has been added to the database
     assert_eq!(
-        ctx.queries.find_one_vehicle("vin1").await.ok(),
+        ctx.queries
+            .vehicle_queries()
+            .find_one_vehicle("vin1")
+            .await
+            .ok(),
         Some(serde_json::from_value(vehicle_json.clone())?),
     );
 
@@ -75,7 +82,10 @@ async fn test_get_vehicle() -> Result<()> {
         engine: Engine::Combustion,
         ev_data: None,
     };
-    ctx.queries.create_vehicle(&vehicle).await?;
+    ctx.queries
+        .vehicle_queries()
+        .create_vehicle(&vehicle)
+        .await?;
 
     // Get existing vehicle => OK
     let res = client
@@ -110,7 +120,10 @@ async fn test_delete_vehicle() -> Result<()> {
         engine: Engine::Combustion,
         ev_data: None,
     };
-    ctx.queries.create_vehicle(&vehicle).await?;
+    ctx.queries
+        .vehicle_queries()
+        .create_vehicle(&vehicle)
+        .await?;
 
     // Delete existing vehicle => OK
     let res = client
@@ -120,7 +133,12 @@ async fn test_delete_vehicle() -> Result<()> {
     assert_eq!(res.status(), StatusCode::OK);
 
     // Ensure that it is not in the database anymore
-    assert!(ctx.queries.find_one_vehicle("vin1").await.is_err());
+    assert!(ctx
+        .queries
+        .vehicle_queries()
+        .find_one_vehicle("vin1")
+        .await
+        .is_err());
 
     Ok(())
 }
@@ -129,8 +147,10 @@ fn json_value(s: &str) -> Result<serde_json::Value> {
     Ok(serde_json::from_str::<serde_json::Value>(s)?)
 }
 
+const TEST_KEYSPACE: &'static str = "hello_test";
+
 struct Context {
-    queries: Arc<dyn VehicleQueries>,
+    queries: Arc<ScyllaQueries>,
     addr: SocketAddr,
 }
 
@@ -146,8 +166,7 @@ impl Context {
 impl Drop for Context {
     fn drop(&mut self) {}
 }
-async fn create_test_queries() -> Result<impl VehicleQueries> {
-    use hello::db::scylla::vehicle_queries::ScyllaVehicleQueries;
+async fn create_test_queries() -> Result<ScyllaQueries> {
     use scylla::SessionBuilder;
 
     let uri = std::env::var("SCYLLA_URI").unwrap_or_else(|_| "127.0.0.1:9042".to_string());
@@ -155,27 +174,25 @@ async fn create_test_queries() -> Result<impl VehicleQueries> {
 
     // First, delete test keyspace to have a fresh test data
     session
-        .query("DROP KEYSPACE IF EXISTS hello_test", &[])
+        .query(format!("DROP KEYSPACE IF EXISTS {}", TEST_KEYSPACE), &[])
         .await
         .unwrap_or_default();
 
-    let queries =
-        ScyllaVehicleQueries::try_new(Arc::new(session), "hello_test".to_string()).await?;
-    Ok(queries)
+    Ok(ScyllaQueries::new(session, TEST_KEYSPACE).await?)
 }
 
-async fn serve(queries: Arc<dyn VehicleQueries>) -> Result<SocketAddr> {
+async fn serve<Q: Queries>(queries: Arc<Q>) -> Result<SocketAddr> {
     // TCP listener
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
     let listener = TcpListener::bind(&addr)?;
     let addr = listener.local_addr()?;
 
-    // Router
-    let router = hello::router::create_router(queries);
+    // App
+    let app = hello::app::App::new(queries);
 
     // Run our app
     tracing::debug!("listening on {:?}", listener);
-    let server = axum::Server::from_tcp(listener)?.serve(router.into_make_service());
+    let server = axum::Server::from_tcp(listener)?.serve(app.router.into_make_service());
     tokio::spawn(async move { server.await });
 
     Ok(addr)

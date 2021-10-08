@@ -7,34 +7,38 @@ use axum::{
     Json,
 };
 
-use crate::{db::queries::VehicleQueries, model::vehicle::Vehicle, response::AppResponseResult};
+use crate::{
+    db::queries::{Queries, VehicleQueries},
+    model::vehicle::Vehicle,
+    response::AppResponseResult,
+};
 
 #[tracing::instrument(err)]
-pub async fn post_vehicle(
+pub async fn post_vehicle<Q: Queries>(
     Json(payload): Json<Vehicle>,
-    queries: extract::Extension<Arc<dyn VehicleQueries>>,
+    queries: extract::Extension<Arc<Q>>,
 ) -> AppResponseResult {
-    queries.create_vehicle(&payload).await?;
+    queries.vehicle_queries().create_vehicle(&payload).await?;
 
     Ok((StatusCode::CREATED, Json(payload)).into_response())
 }
 
 #[tracing::instrument(err)]
-pub async fn get_vehicle(
+pub async fn get_vehicle<Q: Queries>(
     Path(vin): Path<String>,
-    queries: extract::Extension<Arc<dyn VehicleQueries>>,
+    queries: extract::Extension<Arc<Q>>,
 ) -> AppResponseResult {
-    let vehicle = queries.find_one_vehicle(&vin).await?;
+    let vehicle = queries.vehicle_queries().find_one_vehicle(&vin).await?;
 
     Ok((StatusCode::OK, Json(vehicle)).into_response())
 }
 
 #[tracing::instrument(err)]
-pub async fn delete_vehicle(
+pub async fn delete_vehicle<Q: Queries>(
     Path(vin): Path<String>,
-    queries: extract::Extension<Arc<dyn VehicleQueries>>,
+    queries: extract::Extension<Arc<Q>>,
 ) -> AppResponseResult {
-    queries.delete_one_vehicle(&vin).await?;
+    queries.vehicle_queries().delete_one_vehicle(&vin).await?;
 
     Ok((StatusCode::OK, Json(())).into_response())
 }
@@ -44,7 +48,11 @@ mod tests {
     use mockall::predicate::eq;
 
     use super::*;
-    use crate::{db::queries, error::AppError, model::vehicle};
+    use crate::{
+        db::queries::{self},
+        error::AppError,
+        model::vehicle,
+    };
 
     #[tokio::test]
     async fn test_post_vehicle_ok() {
@@ -54,12 +62,13 @@ mod tests {
             ev_data: None,
         };
 
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_create_vehicle()
             .with(eq(vehicle.clone()))
             .times(1)
             .returning(|_| Ok(()));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = post_vehicle(
             Json(vehicle.clone()),
@@ -82,12 +91,13 @@ mod tests {
             ev_data: None,
         };
 
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_create_vehicle()
             .with(eq(vehicle.clone()))
             .times(1)
             .returning(|_| Err(AppError::AlreadyExists("Vehicle")));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = post_vehicle(
             Json(vehicle.clone()),
@@ -110,12 +120,13 @@ mod tests {
             ev_data: None,
         };
 
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_create_vehicle()
             .with(eq(vehicle.clone()))
             .times(1)
             .returning(|_| Err("Test error".into()));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = post_vehicle(Json(vehicle), extract::Extension(Arc::new(mock_queries)))
             .await
@@ -136,12 +147,13 @@ mod tests {
         };
         let vehicle_clone = vehicle.clone();
 
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_find_one_vehicle()
             .with(eq("vin"))
             .times(1)
             .returning(move |_| Ok(vehicle_clone.clone()));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = get_vehicle(
             Path("vin".to_string()),
@@ -155,12 +167,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_vehicle_not_found() {
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_find_one_vehicle()
             .with(eq("vin"))
             .times(1)
             .returning(|_| Err(AppError::NotFound("Vehicle")));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = get_vehicle(
             Path("vin".to_string()),
@@ -177,12 +190,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_vehicle_error() {
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_find_one_vehicle()
             .with(eq("vin"))
             .times(1)
             .returning(|_| Err("Test error".into()));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = get_vehicle(
             Path("vin".to_string()),
@@ -199,12 +213,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_vehicle_ok() {
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_delete_one_vehicle()
             .with(eq("vin"))
             .times(1)
             .returning(move |_| Ok(()));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = delete_vehicle(
             Path("vin".to_string()),
@@ -218,12 +233,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_vehicle_not_found() {
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_delete_one_vehicle()
             .with(eq("vin"))
             .times(1)
             .returning(|_| Err(AppError::NotFound("Vehicle")));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = delete_vehicle(
             Path("vin".to_string()),
@@ -240,12 +256,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_vehicle_error() {
-        let mut mock_queries = queries::MockVehicleQueries::default();
-        mock_queries
+        let mut mock_vehicle_queries = queries::MockVehicleQueries::default();
+        mock_vehicle_queries
             .expect_delete_one_vehicle()
             .with(eq("vin"))
             .times(1)
             .returning(|_| Err("Test error".into()));
+        let mock_queries = create_queries(mock_vehicle_queries);
 
         let response = delete_vehicle(
             Path("vin".to_string()),
@@ -268,5 +285,22 @@ mod tests {
             .await
             .map_err(Into::into)
             .unwrap()
+    }
+
+    #[derive(Debug)]
+    struct TestQueries {
+        vehicle_queries: queries::MockVehicleQueries,
+    }
+
+    impl Queries for TestQueries {
+        type VQ = queries::MockVehicleQueries;
+
+        fn vehicle_queries(&self) -> &Self::VQ {
+            &self.vehicle_queries
+        }
+    }
+
+    fn create_queries(vehicle_queries: queries::MockVehicleQueries) -> TestQueries {
+        TestQueries { vehicle_queries }
     }
 }

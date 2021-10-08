@@ -1,0 +1,167 @@
+@startuml pClass diagram
+
+
+' AxumServer, AxumRouter, App
+
+class AxumServer as "axum::Server" <<external>> {
+    + async serve()
+}
+
+class AxumRouter as "axum::Router" <<external>> {
+	+ route()
+	+ layer()
+}
+
+class TowerService as "tower::Service" <<external>>
+
+class App as "app::App" <<app>>
+class State as "state::State"
+
+AxumServer o-right-> TowerService
+AxumRouter -up-|> TowerService
+App o-left-> AxumRouter : boxed
+App o-right-State
+
+remove State
+
+
+' Routing 
+
+' abusing 'annotation' element for module functions
+annotation routing as "routing::*" <<routing>> {
+	+ create_router()
+}
+
+' abusing 'annotation' element for module functions
+annotation handlers as "routing::handlers::*" <<routing>>
+handlers ..> State
+handlers ..> Queries
+
+'note right of handlers
+'   * user_handlers
+'   * vehicle_handlers
+'endnote
+
+routing -right-> handlers : route
+routing -up-> State : extension layer
+
+App -down- dummy
+dummy -right- routing
+App .down.> routing
+hide dummy
+
+
+' Model
+
+package Model <<model>> {
+	annotation model as "model::*::*" <<model>>
+	
+	note bottom of model
+		* vehicle::Vehicle
+		* user::User
+	endnote
+}
+
+dummy -down- model
+
+
+' Queries
+
+interface Queries as "db::queries::Queries" <<db>> {
+	+ user_queries()
+	+ vehicle_queries()
+	+ other_queries()
+}
+
+class ScyllaQueries as "db::scylla::Queries" <<db>>
+
+App o-[norank]-> Queries
+routing -down-> Queries : extension layer
+
+
+' Scylla
+
+class ScyllaSession as "scylla::Session" <<external>>
+
+ScyllaQueries o-left-> ScyllaSession
+Queries <|-- ScyllaQueries
+
+
+' Legend
+
+!$appColor = "#ec3c13"
+!$routingColor = "#71b32b"
+!$dbColor = "#1b91db"
+!$modelColor = "#ed8b24"
+!$externalColor = "#787878"
+
+legend right
+|= |= <color:#000000>Legend  \n|
+|<color:$appColor>■</color>| <color:#333333>app |
+|<color:$routingColor>■</color>| <color:#333333>routing |
+|<color:$dbColor>■</color>| <color:#333333>db |
+|<color:$modelColor>■</color>| <color:#333333>model |
+|<color:$externalColor>■</color>| <color:#333333>external |
+endlegend
+
+
+' Appearance
+
+hide stereotype
+hide empty members
+Skinparam shadowing false
+
+hide annotation circle
+
+skinparam {
+	BackgroundColor #f2f2f2
+	RoundCorner 10
+	Padding 1.5
+
+	ArrowColor #787878
+	ArrowThickness 2
+}
+
+skinparam class {
+	BorderThickness 2
+	BackgroundColor #ffffff
+	AttributeFontColor #2f2f2f
+	AttributeFontSize 10
+	FontSize 13
+	FontStyle "bold"
+	BorderColor #2c2c2c
+	
+	FontColor<<app>> $appColor
+	BorderColor<<app>> $appColor
+
+	FontColor<<routing>> $routingColor
+	BorderColor<<routing>> $routingColor
+
+	FontColor<<db>> $dbColor
+	BorderColor<<db>> $dbColor
+
+	FontColor<<model>> $modelColor
+	BorderColor<<model>> $modelColor
+
+	FontColor<<external>> $externalColor
+	BorderColor<<external>> $externalColor
+}
+
+skinparam package {
+	BorderThickness 1
+
+	FontColor<<model>> $modelColor
+	FontColor<<routing>> $routingColor
+	FontColor<<db>> $dbColor
+
+	BorderColor<<model>> $modelColor
+	BorderColor<<routing>> $routingColor
+	BorderColor<<db>> $dbColor
+}
+
+skinparam legendBackgroundColor #ffffff
+skinparam legendBorderColor #4c4c4c
+skinparam LegendFontColor #ffffff
+skinparam LegendFontSize 11
+
+@enduml

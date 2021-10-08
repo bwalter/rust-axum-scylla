@@ -1,0 +1,66 @@
+@startuml Class diagram
+
+actor User
+interface HTTP
+
+component HelloApp
+database Scylla as "Scylla DB"
+
+User --right--( HTTP
+HTTP --right-- HelloApp
+HelloApp -down-> Scylla : queries
+
+note top of HTTP
+	Rest API:
+	* POST /vehicle + JSON body
+	* GET /vehicle/<vin>
+	* DELETE /vehicle/<vin>
+end note
+
+
+' Appearance
+
+!$userColor = "#71b32b"
+!$appColor = "#ec3c13"
+!$dbColor = "#1b91db"
+
+Skinparam shadowing false
+
+skinparam {
+	BackgroundColor #f2f2f2
+	RoundCorner 10
+	ArrowColor #787878
+}
+
+skinparam component {
+	BackgroundColor #ffffff
+	FontSize 14
+
+	FontColor $appColor
+	BorderColor $appColor
+}
+
+skinparam database {
+	BackgroundColor #ffffff
+	FontSize 14
+
+	FontColor $dbColor
+	BorderColor $dbColor
+}
+
+skinparam actor {
+	BorderColor $userColor
+	BackgroundColor #ffffff
+}
+
+skinparam interface {
+	BorderColor $appColor
+	BackgroundColor #ffffff
+}
+
+skinparam note {
+	BackgroundColor #fff8d6
+	BorderColor #ffc707
+}
+
+@enduml

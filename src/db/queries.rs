@@ -7,6 +7,12 @@ use crate::{model::vehicle::Vehicle, result::AppResult};
 /// Will be implemented by concrete DB implementation, e.g.:
 /// - Scylla client
 /// - Mocked database (for tests)
+pub trait Queries: std::fmt::Debug + Send + Sync + 'static {
+    type VQ: VehicleQueries;
+
+    fn vehicle_queries(&self) -> &Self::VQ;
+}
+
 #[mockall::automock]
 #[async_trait]
 pub trait VehicleQueries: std::fmt::Debug + Send + Sync + 'static {

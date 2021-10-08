@@ -1,8 +1,13 @@
-use std::net::{SocketAddr, TcpListener};
+use std::{
+    net::{SocketAddr, TcpListener},
+    sync::Arc,
+};
 
 use anyhow::Result;
 
-use hello::{db, router};
+use hello::{app::App, db};
+
+const KEYSPACE: &str = "hello";
 
 /// A sample Rust backend app with Rest API and Scylla DB
 #[derive(argh::FromArgs)]
@@ -25,20 +30,21 @@ async fn main() -> Result<()> {
     //console_subscriber::init();
     tracing_subscriber::fmt::init();
 
-    // Start DB session and Queries
-    let queries = db::start_db_session_and_create_queries(&args.addr, args.port).await?;
-
     // TCP listener
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = TcpListener::bind(&addr)?;
 
-    // Create router
-    let router = router::create_router(queries);
+    // DB session and queries
+    let session = db::scylla::create_session(&args.addr, args.port).await?;
+    let queries = db::scylla::queries::ScyllaQueries::new(session, KEYSPACE).await?;
+
+    // Create app
+    let app = App::new(Arc::new(queries));
 
     // Start server
     tracing::debug!("listening on {:?}", listener);
     axum::Server::from_tcp(listener)?
-        .serve(router.into_make_service())
+        .serve(app.router.into_make_service())
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c()
                 .await

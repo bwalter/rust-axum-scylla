@@ -9,17 +9,18 @@ use std::{
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
-use crate::db::queries::VehicleQueries;
+use crate::db::queries::Queries;
 use crate::error::AppError;
-use crate::handlers::vehicle_handlers;
 use crate::response::AppResponse;
 use crate::state::State;
 
-#[tracing::instrument]
-pub fn create_router(queries: Arc<dyn VehicleQueries>) -> Router<BoxRoute> {
-    // Shared state
-    let shared_state = Arc::new(RwLock::new(State {}));
+pub mod vehicle_handlers;
 
+#[tracing::instrument]
+pub fn create_router<Q: Queries>(
+    shared_state: Arc<RwLock<State>>,
+    queries: Arc<Q>,
+) -> Router<BoxRoute> {
     // Middlewares: Tower layer stack
     let middleware_stack = ServiceBuilder::new()
         .timeout(Duration::from_secs(5))
@@ -29,10 +30,10 @@ pub fn create_router(queries: Arc<dyn VehicleQueries>) -> Router<BoxRoute> {
     // Route
     use axum::handler::{get, post};
     Router::new()
-        .route("/vehicle", post(vehicle_handlers::post_vehicle))
+        .route("/vehicle", post(vehicle_handlers::post_vehicle::<Q>))
         .route(
             "/vehicle/:vin",
-            get(vehicle_handlers::get_vehicle).delete(vehicle_handlers::delete_vehicle),
+            get(vehicle_handlers::get_vehicle::<Q>).delete(vehicle_handlers::delete_vehicle::<Q>),
         )
         .layer(middleware_stack)
         .layer(AddExtensionLayer::new(queries))
